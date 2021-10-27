@@ -80,7 +80,7 @@
       <div id="controls">
         <label for="pwd">Температура (в Кельвинах):</label><input type="text" id="cmb_temperature" value="" oninput="update()"><br>
         <label for="pwd">Размер флуктуаций (в Кельвинах):</label><input type="text" id="cmb_fluctuations" value="" oninput="update()"><br>
-        <button id="stay_still">Остановиться, показать в мнимых цветах</button><br>
+        <button id="stay_still">Показать реликтовое излучение в мнимых цветах</button><br>
         <button id="make_default">Двигаться вперёд, показать в настоящих цветах</button><br>
         Зависимость цвета от температуры:<br>
         <img src="blackbody.jpg" width="100%">
@@ -326,10 +326,10 @@
 
         mesh.material.uniforms.boost.value = lorentz_boost;
         document.getElementById("to_print").innerHTML = 
-                "Кнопки вверх/вниз изменяют скорость. Колёсиком мышки можно приблизиться, если щёлкнуть и двигать, то можно повернуть камеру. <br> \
+                "Кнопки вверх/вниз изменяют скорость. Колёсиком мышки можно приблизиться. Если щёлкнуть и двигать, то можно повернуть камеру. <br> \
                  Ваша скорость " + (get_speed(lorentz_boost.elements[15])).toFixed(9) + " от скорости света \
                  <br>Угол обзора (сверху вниз) " + camera.fov.toFixed(3) + "° \
-                 <br>(примерно соответствует увеличению " + (75.0 / camera.fov).toFixed(2) + "x";
+                 <br>(примерно соответствует увеличению " + (75.0 / camera.fov).toFixed(2) + "x)";
 
         renderer.render( scene, camera );
       }
