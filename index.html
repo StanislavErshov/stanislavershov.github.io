@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Relativistic beaming of CMB</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        body {
+          margin: 0;
+          background-color: #000;
+          color: #00f;
+          font-family: Monospace;
+          font-size: 13px;
+          line-height: 24px;
+          overscroll-behavior: none;
+        }
+
+        #info {
+          position: absolute;
+          top: 0px;
+          background-color: #fff;
+          color: #000;
+          width: 30%;
+          padding: 10px;
+          box-sizing: border-box;
+          text-align: center;
+          -moz-user-select: none;
+          -webkit-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+          pointer-events: none;
+          z-index: 1; /* TODO Solve this in HTML */
+        }
+
+        a, button, input, select {
+          pointer-events: auto;
+        }
+
+  img {
+    border: 1px solid #000;
+  }
+
+        .dg.ac {
+          -moz-user-select: none;
+          -webkit-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+          z-index: 2 !important; /* TODO Solve this in HTML */
+        }
+
+        #overlay {
+          position: absolute;
+          font-size: 16px;
+          z-index: 2;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          background: rgba(0,0,0,0.7);
+        }
+
+        #notSupported {
+          width: 50%;
+          margin: auto;
+          background-color: #f00;
+          margin-top: 20px;
+          padding: 10px;
+        }
+    </style>
+  </head>
+  <body>
+
+    <div id="container"></div>
+    <div id="info">
+      <div id="to_print">Wait for the CMB to load...</div>
+      <div id="controls">
+        <label for="pwd">CMB temperature (in K):</label><input type="text" id="cmb_temperature" value="" oninput="update()"><br>
+        <label for="pwd">CMB fluctuations (in K):</label><input type="text" id="cmb_fluctuations" value="" oninput="update()"><br>
+        <button id="stay_still">Stay still, false color</button><br>
+        <button id="make_default">Move fast, true color</button><br>
+        Color map (from 0 to 12 200 K):<br>
+        <img src="blackbody.jpg" width="100%">
+      </div>
+    </div>
+
+    <script id="vertexShader" type="x-shader/x-vertex">
+      varying vec2 vUv;
+      varying float blueshift;
+      uniform mat4 boost;
+
+      void main() {
+          vUv = uv;
+
+          vec4 boosted = boost * vec4(position, 1.0);
+          vec3 new_position = vec3(boosted.x, boosted.y, boosted.z) / boosted.w;
+          blueshift = boosted.w;
+
+          gl_Position =   projectionMatrix * 
+                          modelViewMatrix * 
+                          vec4(new_position, 1.0);
+      }
+    </script>
+
+    <script id="fragmentShader" type="x-shader/x-fragment">
+      uniform sampler2D texture1;
+      uniform sampler2D blackbody;
+      uniform float cmb_fluctuations;
+      uniform float cmb_temperature;
+
+      varying float blueshift;
+
+      varying vec2 vUv;
+
+      void main() {
+          float temperature = ((texture2D(texture1, vUv).x - 0.5) * 2.0 * cmb_fluctuations + cmb_temperature) * blueshift;
+          float end = 12200.0;
+          vec4 color = texture2D(blackbody, vec2(min(end, temperature) / end, 0.0));
+          gl_FragColor = color;
+      }
+    </script>
+
+    <script type="module">
+
+      import * as THREE from "https://cdn.skypack.dev/three";
+
+      let camera, scene, renderer;
+
+      let isUserInteracting = false,
+        onPointerDownMouseX = 0, onPointerDownMouseY = 0,
+        lon = 0, onPointerDownLon = 0,
+        lat = 0, onPointerDownLat = 0,
+        phi = 0, theta = 0;
+
+      let moving = 0;
+      let mesh;
+
+      let lorentz_boost;
+      let speed;
+      const default_speed = Math.atanh(-0.999999);
+      const default_cmb_temperature = 2.725;
+      const default_cmb_fluctuations = 2;
+
+      init();
+      animate();
+
+      function get_boost_matrix(speed) {
+        var answer = new THREE.Matrix4();
+        answer.set( 1, 0, 0, 0,
+               0, 1, 0, 0,
+               0, 0, Math.cosh(speed), Math.sinh(speed),
+               0, 0, Math.sinh(speed), Math.cosh(speed) );
+        return answer;
+      }
+
+      function init() {
+
+        const container = document.getElementById( 'container' );
+
+        camera = new THREE.PerspectiveCamera( 1, window.innerWidth / window.innerHeight, 1e-9, 1e9 );
+
+        scene = new THREE.Scene();
+
+        const geometry = new THREE.SphereGeometry( 1, 300, 300 );
+        // invert the geometry on the x-axis so that all of the faces point inward
+        geometry.scale( - 1, 1, 1 );
+
+        var vertShader = document.getElementById('vertexShader').innerHTML;
+        var fragShader = document.getElementById('fragmentShader').innerHTML;
+
+        make_default();
+
+        var uniforms = {
+            texture1: { type: 't', value: THREE.ImageUtils.loadTexture( 'texture.jpg' ) },
+            blackbody: { type: 't', value: THREE.ImageUtils.loadTexture( 'blackbody.jpg' ) },
+            boost: { value: lorentz_boost },
+            cmb_fluctuations: { value : default_cmb_fluctuations },
+            cmb_temperature: { value : default_cmb_temperature }
+        };
+
+        var material = new THREE.ShaderMaterial({
+            uniforms: uniforms,
+            vertexShader: vertShader,
+            fragmentShader: fragShader
+        });
+
+        mesh = new THREE.Mesh( geometry, material );
+
+        scene.add( mesh );
+
+        renderer = new THREE.WebGLRenderer();
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        container.appendChild( renderer.domElement );
+
+        container.style.touchAction = 'none';
+        container.addEventListener('pointerdown', onPointerDown );
+
+        document.addEventListener('wheel', onDocumentMouseWheel);
+        document.addEventListener('keydown', onDocumentKeyDown);
+        window.addEventListener('resize', onWindowResize);
+        document.getElementById("stay_still").addEventListener('click', stay_still);
+        document.getElementById("make_default").addEventListener('click', make_default);
+      }
+
+      function onWindowResize() {
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+      }
+
+      function onDocumentKeyDown ( event ) {
+        if (event.keyCode == 38) {
+          moving = 1;
+        }
+        if (event.keyCode == 40) {
+          moving = -1;
+        }
+        document.addEventListener( 'keyup', onDocumentKeyUp );
+      }
+
+      function onDocumentKeyUp ( event ) {
+        moving = 0;
+        document.removeEventListener( 'keyup', onDocumentKeyUp );
+      }
+
+      function onPointerDown( event ) {
+
+        if ( event.isPrimary === false ) return;
+
+        isUserInteracting = true;
+
+        onPointerDownMouseX = event.clientX;
+        onPointerDownMouseY = event.clientY;
+
+        onPointerDownLon = lon;
+        onPointerDownLat = lat;
+
+        document.addEventListener( 'pointermove', onPointerMove );
+        document.addEventListener( 'pointerup', onPointerUp );
+
+      }
+
+      function onPointerMove( event ) {
+
+        if ( event.isPrimary === false ) return;
+
+        lon = ( onPointerDownMouseX - event.clientX ) * camera.fov / 700 + onPointerDownLon;
+        lat = ( event.clientY - onPointerDownMouseY ) * camera.fov / 700 + onPointerDownLat;
+
+      }
+
+      function onPointerUp() {
+
+        if ( event.isPrimary === false ) return;
+
+        isUserInteracting = false;
+
+        document.removeEventListener( 'pointermove', onPointerMove );
+        document.removeEventListener( 'pointerup', onPointerUp );
+
+      }
+
+      function onDocumentMouseWheel( event ) {
+        event.preventDefault();
+        const fov = camera.fov * (1.0 + event.deltaY * 0.001);
+				camera.fov = THREE.MathUtils.clamp( fov, 1e-5, 75 );
+
+        camera.updateProjectionMatrix();
+      }
+
+      function animate() {
+
+        requestAnimationFrame( animate );
+        update();
+
+      }
+
+      function get_speed( a ) {
+        return Math.sqrt(Math.max(0.0, a * a - 1)) / a;  
+      }
+
+      function make_default( event ) {
+        lon = 0;
+        lat = 0;
+        speed = default_speed;
+        document.getElementById("cmb_temperature").value = default_cmb_temperature;
+        document.getElementById("cmb_fluctuations").value = default_cmb_fluctuations;
+        camera.fov = 1.0;
+        camera.updateProjectionMatrix();
+      }
+
+      function stay_still( event ) {
+        lon = 0;
+        lat = 0;
+        speed = 0;
+        document.getElementById("cmb_temperature").value = "3000";
+        document.getElementById("cmb_fluctuations").value = "2000";
+        camera.fov = 75;
+        camera.updateProjectionMatrix();
+      }
+
+      function update() {
+        lat = Math.max( - 85, Math.min( 85, lat ) );
+        phi = THREE.MathUtils.degToRad( 90 - lat );
+        theta = THREE.MathUtils.degToRad( lon - 90 );
+
+        const x = 500 * Math.sin( phi ) * Math.cos( theta );
+        const y = 500 * Math.cos( phi );
+        const z = 500 * Math.sin( phi ) * Math.sin( theta );
+
+        camera.lookAt( x, y, z );
+
+        speed += -moving / 100.0;
+        lorentz_boost = get_boost_matrix(speed);
+        mesh.material.uniforms.boost.value = lorentz_boost;
+
+        mesh.material.uniforms.cmb_temperature.value = parseFloat(document.getElementById("cmb_temperature").value);
+        mesh.material.uniforms.cmb_fluctuations.value = parseFloat(document.getElementById("cmb_fluctuations").value);
+
+        mesh.material.uniforms.boost.value = lorentz_boost;
+        document.getElementById("to_print").innerHTML = 
+                "Use up/down keys to increase/decrease your speed. Scroll with mouse to zoom in and out. Click and drag to rotate. <br> \
+                 Your current speed is " + (get_speed(lorentz_boost.elements[15])).toFixed(9) + " * c \
+                 <br>Camera angle (from top to bottom) is " + camera.fov.toFixed(3) + "°";
+
+        renderer.render( scene, camera );
+      }
+
+    </script>
+  </body>
+</html>
+
