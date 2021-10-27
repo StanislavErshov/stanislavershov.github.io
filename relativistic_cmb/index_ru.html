@@ -76,13 +76,19 @@
 
     <div id="container"></div>
     <div id="info">
-      <div id="to_print">Дождитесь загрузки реликтового излучения</div>
+      <div id="to_print">
+        <b>Реликтовое излучение</b><br>
+        Кнопки вверх/вниз изменяют скорость. Колёсиком мышки можно приблизиться. Если щёлкнуть и двигать, то можно повернуть камеру. <br>
+
+      </div>
       <div id="controls">
-        <label for="pwd">Температура (в Кельвинах):</label><input type="text" id="cmb_temperature" value="" oninput="update()"><br>
-        <label for="pwd">Размер флуктуаций (в Кельвинах):</label><input type="text" id="cmb_fluctuations" value="" oninput="update()"><br>
-        <button id="stay_still">Показать реликтовое излучение в мнимых цветах</button><br>
-        <button id="make_default">Двигаться вперёд, показать в настоящих цветах</button><br>
-        Зависимость цвета от температуры (от 0 до 12 000 K):<br>
+        <label for="pwd">Скорость (доля скорости света):</label><input type="text" id="speed" value=""><br>
+        <label for="pwd">Угол обзора (сверху вниз):</label><input type="text" id="view_angle" value=""><br>
+        <label for="pwd">Температура реликтового излучения (в Кельвинах):</label><input type="text" id="cmb_temperature" value=""><br>
+        <label for="pwd">Флуктуации (в Кельвинах):</label><input type="text" id="cmb_fluctuations" value=""><br>
+        <button id="stay_still">Показать неподвижное реликтовое излучение</button><br>
+        <button id="make_default">Двигаться со скоростью 0.999999</button><br>
+        Зависимость цвета от температуры (от 0 К до 12 000 К) <br>
         <img src="blackbody.jpg" width="100%">
       </div>
     </div>
@@ -118,7 +124,7 @@
       void main() {
           float temperature = ((texture2D(texture1, vUv).x - 0.5) * 2.0 * cmb_fluctuations + cmb_temperature) * blueshift;
           float end = 12200.0;
-          vec4 color = texture2D(blackbody, vec2(min(end, temperature) / end, 0.0));
+          vec4 color = texture2D(blackbody, vec2(max(0.0, min(end, temperature)) / end, 0.0));
           gl_FragColor = color;
       }
     </script>
@@ -138,11 +144,15 @@
       let moving = 0;
       let mesh;
 
-      let lorentz_boost;
-      let speed;
-      const default_speed = Math.atanh(-0.999999);
+      const default_speed = 0.999999;
       const default_cmb_temperature = 2.725;
       const default_cmb_fluctuations = 2;
+
+      let fov = 1.0;
+      let speed;
+      let lorentz_boost;
+      let cmb_temperature;
+      let cmb_fluctuations;
 
       init();
       animate();
@@ -160,7 +170,7 @@
 
         const container = document.getElementById( 'container' );
 
-        camera = new THREE.PerspectiveCamera( 1, window.innerWidth / window.innerHeight, 1e-9, 1e9 );
+        camera = new THREE.PerspectiveCamera( fov, window.innerWidth / window.innerHeight, 1e-9, 1e9 );
 
         scene = new THREE.Scene();
 
@@ -177,8 +187,8 @@
             texture1: { type: 't', value: THREE.ImageUtils.loadTexture( 'cmb.jpg' ) },
             blackbody: { type: 't', value: THREE.ImageUtils.loadTexture( 'blackbody.jpg' ) },
             boost: { value: lorentz_boost },
-            cmb_fluctuations: { value : default_cmb_fluctuations },
-            cmb_temperature: { value : default_cmb_temperature }
+            cmb_fluctuations: { value : cmb_fluctuations },
+            cmb_temperature: { value : cmb_temperature }
         };
 
         var material = new THREE.ShaderMaterial({
@@ -204,6 +214,10 @@
         window.addEventListener('resize', onWindowResize);
         document.getElementById("stay_still").addEventListener('click', stay_still);
         document.getElementById("make_default").addEventListener('click', make_default);
+        document.getElementById("speed").addEventListener('input', on_speed_input);
+        document.getElementById("view_angle").addEventListener('input', on_view_angle_input);
+        document.getElementById("cmb_temperature").addEventListener('input', on_cmb_temperature_input);
+        document.getElementById("cmb_fluctuations").addEventListener('input', on_cmb_fluctuations_input);
       }
 
       function onWindowResize() {
@@ -269,10 +283,7 @@
 
       function onDocumentMouseWheel( event ) {
         event.preventDefault();
-        const fov = camera.fov * (1.0 + event.deltaY * 0.001);
-				camera.fov = THREE.MathUtils.clamp( fov, 1e-5, 75 );
-
-        camera.updateProjectionMatrix();
+        change_fov(fov * (1.0 + event.deltaY * 0.001));
       }
 
       function animate() {
@@ -289,21 +300,56 @@
       function make_default( event ) {
         lon = 0;
         lat = 0;
-        speed = default_speed;
-        document.getElementById("cmb_temperature").value = default_cmb_temperature;
-        document.getElementById("cmb_fluctuations").value = default_cmb_fluctuations;
-        camera.fov = 1.0;
-        camera.updateProjectionMatrix();
+        change_cmb_temperature(default_cmb_temperature);
+        change_cmb_fluctuations(default_cmb_fluctuations);
+        change_fov(1.0);
+        change_speed(default_speed);
       }
 
       function stay_still( event ) {
         lon = 0;
         lat = 0;
-        speed = 0;
-        document.getElementById("cmb_temperature").value = "3000";
-        document.getElementById("cmb_fluctuations").value = "2000";
-        camera.fov = 75;
-        camera.updateProjectionMatrix();
+        change_cmb_temperature(3000.0);
+        change_cmb_fluctuations(2000.0);
+        change_fov(75.0);
+        change_speed(0.0);
+      }
+
+      function on_cmb_temperature_input() {
+        cmb_temperature = parseFloat(document.getElementById("cmb_temperature").value);
+      }
+
+      function change_cmb_temperature(val) {
+        document.getElementById("cmb_temperature").value = val.toFixed(3);
+        cmb_temperature = val;
+      }
+
+      function on_cmb_fluctuations_input() {
+        cmb_fluctuations = parseFloat(document.getElementById("cmb_fluctuations").value);
+      }
+
+      function change_cmb_fluctuations(val) {
+        document.getElementById("cmb_fluctuations").value = val.toFixed(3);
+        cmb_fluctuations = val;
+      }
+      
+      function on_speed_input() {
+        speed = THREE.MathUtils.clamp(parseFloat(document.getElementById("speed").value), -0.999999999, 0.999999999);
+      }
+
+      function change_speed(val) {
+        document.getElementById("speed").value = val.toFixed(9);
+        speed = val;
+      }
+
+      function on_view_angle_input() {
+        fov = parseFloat(document.getElementById("view_angle").value);
+        fov = THREE.MathUtils.clamp( fov, 1e-5, 75 );
+      }
+
+      function change_fov(val) {
+        fov = THREE.MathUtils.clamp( val, 1e-5, 75 );
+        document.getElementById("view_angle").value = fov.toFixed(3);
       }
 
       function update() {
@@ -317,20 +363,21 @@
 
         camera.lookAt( x, y, z );
 
-        speed += -moving / 100.0;
-        lorentz_boost = get_boost_matrix(speed);
-        mesh.material.uniforms.boost.value = lorentz_boost;
+        if (moving != 0) {
+          change_speed(Math.tanh(Math.atanh(speed) + moving / 100.0));
+        }
 
-        mesh.material.uniforms.cmb_temperature.value = parseFloat(document.getElementById("cmb_temperature").value);
-        mesh.material.uniforms.cmb_fluctuations.value = parseFloat(document.getElementById("cmb_fluctuations").value);
-
+        lorentz_boost = get_boost_matrix(-Math.atanh(speed));
         mesh.material.uniforms.boost.value = lorentz_boost;
+        mesh.material.uniforms.cmb_temperature.value = cmb_temperature;
+        mesh.material.uniforms.cmb_fluctuations.value = cmb_fluctuations;
+        camera.fov = THREE.MathUtils.clamp( fov, 1e-5, 75 );
+        camera.updateProjectionMatrix();
+
         document.getElementById("to_print").innerHTML = 
-                "<b>Реликтовое излучение</b><br> \
-                Кнопки вверх/вниз изменяют скорость. Колёсиком мышки можно приблизиться. Если щёлкнуть и двигать, то можно повернуть камеру. <br> \
-                 Ваша скорость " + (get_speed(lorentz_boost.elements[15])).toFixed(9) + " от скорости света \
-                 <br>Угол обзора (сверху вниз) " + camera.fov.toFixed(3) + "° \
-                 <br>(примерно соответствует увеличению " + (75.0 / camera.fov).toFixed(2) + "x)";
+                "Use up/down keys to increase/decrease your speed. \
+                Scroll with mouse to zoom in and out. \
+                Click and drag to rotate. <br> ";
 
         renderer.render( scene, camera );
       }
