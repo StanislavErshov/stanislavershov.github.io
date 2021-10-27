@@ -374,11 +374,6 @@
         camera.fov = THREE.MathUtils.clamp( fov, 1e-5, 75 );
         camera.updateProjectionMatrix();
 
-        document.getElementById("to_print").innerHTML = 
-                "Use up/down keys to increase/decrease your speed. \
-                Scroll with mouse to zoom in and out. \
-                Click and drag to rotate. <br> ";
-
         renderer.render( scene, camera );
       }
 
