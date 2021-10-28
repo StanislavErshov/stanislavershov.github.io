@@ -80,6 +80,7 @@
         Use up/down keys to increase/decrease your speed.
                 Scroll with mouse to zoom in and out.
                 Click and drag to rotate.
+                Any parameter below can be changed.
       </div>
       <div id="controls">
         <label for="pwd">Speed (in c):</label><input type="text" id="speed" value=""><br>
@@ -87,7 +88,9 @@
         <label for="pwd">CMB temperature (in K):</label><input type="text" id="cmb_temperature" value=""><br>
         <label for="pwd">CMB fluctuations (in K):</label><input type="text" id="cmb_fluctuations" value=""><br>
         <button id="stay_still">Stay still, false color</button><br>
+        <button id="move_slowly">Move slowly, false color</button><br>
         <button id="make_default">Move fast, true color</button><br>
+        <button id="move_fast_large_fluctuations">Move fast, large fluctuations</button><br>
         Color map (from 0 to 12 200 K):<br>
         <img src="blackbody.jpg" width="100%"><br>
         <a href="Relativistic_beaming_of_CMB.pdf">Some maths</a><br>
@@ -216,6 +219,8 @@
         window.addEventListener('resize', onWindowResize);
         document.getElementById("stay_still").addEventListener('click', stay_still);
         document.getElementById("make_default").addEventListener('click', make_default);
+        document.getElementById("move_fast_large_fluctuations").addEventListener('click', move_fast_large_fluctuations);
+        document.getElementById("move_slowly").addEventListener('click', move_slowly);
         document.getElementById("speed").addEventListener('input', on_speed_input);
         document.getElementById("view_angle").addEventListener('input', on_view_angle_input);
         document.getElementById("cmb_temperature").addEventListener('input', on_cmb_temperature_input);
@@ -308,6 +313,15 @@
         change_speed(default_speed);
       }
 
+      function move_fast_large_fluctuations( event ) {
+        lon = 0;
+        lat = 0;
+        change_cmb_temperature(default_cmb_temperature);
+        change_cmb_fluctuations(2.0);
+        change_fov(1.0);
+        change_speed(default_speed);
+      }
+
       function stay_still( event ) {
         lon = 0;
         lat = 0;
@@ -315,6 +329,15 @@
         change_cmb_fluctuations(2000.0);
         change_fov(75.0);
         change_speed(0.0);
+      }
+
+      function move_slowly( event ) {
+        lon = 0;
+        lat = 0;
+        change_cmb_temperature(3000.0);
+        change_cmb_fluctuations(2000.0);
+        change_fov(75.0);
+        change_speed(0.9);
       }
 
       function on_cmb_temperature_input() {

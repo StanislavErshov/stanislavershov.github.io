@@ -79,7 +79,7 @@
       <div id="to_print">
         <b>Реликтовое излучение</b><br>
         Кнопки вверх/вниз изменяют скорость. Колёсиком мышки можно приблизиться. Если щёлкнуть и двигать, то можно повернуть камеру. <br>
-
+        Все параметры можно менять.
       </div>
       <div id="controls">
         <label for="pwd">Скорость (доля скорости света):</label><input type="text" id="speed" value=""><br>
@@ -87,9 +87,12 @@
         <label for="pwd">Температура реликтового излучения (в Кельвинах):</label><input type="text" id="cmb_temperature" value=""><br>
         <label for="pwd">Флуктуации (в Кельвинах):</label><input type="text" id="cmb_fluctuations" value=""><br>
         <button id="stay_still">Показать неподвижное реликтовое излучение</button><br>
-        <button id="make_default">Двигаться со скоростью 0.999999</button><br>
+        <button id="move_slowly">Двигаться медленно</button><br>
+        <button id="make_default">Двигаться быстро</button><br>
+        <button id="move_fast_large_fluctuations">Двигаться быстро, большие флуктуации</button><br>
         Зависимость цвета от температуры (от 0 К до 12 000 К) <br>
-        <img src="blackbody.jpg" width="100%">
+        <img src="blackbody.jpg" width="100%"><br>
+        <a href="Relativistic_beaming_of_CMB.pdf">Расчёты</a><br>
       </div>
     </div>
 
@@ -214,6 +217,8 @@
         window.addEventListener('resize', onWindowResize);
         document.getElementById("stay_still").addEventListener('click', stay_still);
         document.getElementById("make_default").addEventListener('click', make_default);
+        document.getElementById("move_fast_large_fluctuations").addEventListener('click', move_fast_large_fluctuations);
+        document.getElementById("move_slowly").addEventListener('click', move_slowly);
         document.getElementById("speed").addEventListener('input', on_speed_input);
         document.getElementById("view_angle").addEventListener('input', on_view_angle_input);
         document.getElementById("cmb_temperature").addEventListener('input', on_cmb_temperature_input);
@@ -306,6 +311,15 @@
         change_speed(default_speed);
       }
 
+      function move_fast_large_fluctuations( event ) {
+        lon = 0;
+        lat = 0;
+        change_cmb_temperature(default_cmb_temperature);
+        change_cmb_fluctuations(2.0);
+        change_fov(1.0);
+        change_speed(default_speed);
+      }
+
       function stay_still( event ) {
         lon = 0;
         lat = 0;
@@ -313,6 +327,15 @@
         change_cmb_fluctuations(2000.0);
         change_fov(75.0);
         change_speed(0.0);
+      }
+
+      function move_slowly( event ) {
+        lon = 0;
+        lat = 0;
+        change_cmb_temperature(3000.0);
+        change_cmb_fluctuations(2000.0);
+        change_fov(75.0);
+        change_speed(0.9);
       }
 
       function on_cmb_temperature_input() {
@@ -329,7 +352,7 @@
       }
 
       function change_cmb_fluctuations(val) {
-        document.getElementById("cmb_fluctuations").value = val.toFixed(3);
+        document.getElementById("cmb_fluctuations").value = val.toFixed(7);
         cmb_fluctuations = val;
       }
       
