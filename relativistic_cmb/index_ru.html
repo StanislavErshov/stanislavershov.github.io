@@ -108,8 +108,8 @@
           vec3 new_position = vec3(boosted.x, boosted.y, boosted.z) / boosted.w;
           blueshift = boosted.w;
 
-          gl_Position =   projectionMatrix * 
-                          modelViewMatrix * 
+          gl_Position =   projectionMatrix *
+                          modelViewMatrix *
                           vec4(new_position, 1.0);
       }
     </script>
@@ -299,7 +299,7 @@
       }
 
       function get_speed( a ) {
-        return Math.sqrt(Math.max(0.0, a * a - 1)) / a;  
+        return Math.sqrt(Math.max(0.0, a * a - 1)) / a;
       }
 
       function make_default( event ) {
@@ -355,7 +355,7 @@
         document.getElementById("cmb_fluctuations").value = val.toFixed(7);
         cmb_fluctuations = val;
       }
-      
+
       function on_speed_input() {
         speed = THREE.MathUtils.clamp(parseFloat(document.getElementById("speed").value), -0.999999999, 0.999999999);
       }
@@ -403,4 +403,3 @@
     </script>
   </body>
 </html>
-
