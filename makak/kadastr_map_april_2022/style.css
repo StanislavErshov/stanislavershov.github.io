@@ -1,0 +1,18 @@
+html,
+body {
+  height: 98%;
+}
+
+body {
+  display: flex;
+  flex-flow: column;
+}
+
+#status {
+  flex: 0 1 auto;
+}
+
+#map {
+  flex: 1 1 auto;
+  width: auto;
+}

@@ -1,19 +1,23 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8">
     <link rel="icon" type="image/x-icon" href="https://openlayers.org/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.14.1/css/ol.css" type="text/css">
+    <link rel="stylesheet" href="./style.css" type="text/css">
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.14.1/build/ol.js"></script>
+    <script type="module" src="./main.js"></script>
     <title>Участки</title>
-    <script type="module" crossorigin src="./assets/index.f4b6c481.js"></script>
-    <link rel="modulepreload" href="./assets/vendor.4f28ffb6.js">
-    <link rel="stylesheet" href="./assets/index.88ad450b.css">
   </head>
   <body>
     <div id="status">
-      Щёлкните на участок <br>
+      Выберите карту: 
+      <select id="MapTypeSelect">
+        <option value="osm" selected="selected">OpenStreetMap</option>
+        <option value="googlesatellite">Google Спутник</option>
+      </select>
+      <span id="selected_description">Щёлкните на участок <br></span>
     </div>
     <div id="map"></div>
-    
   </body>
 </html>
