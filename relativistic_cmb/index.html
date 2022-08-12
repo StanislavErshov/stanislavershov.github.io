@@ -189,8 +189,8 @@
         make_default();
 
         var uniforms = {
-            texture1: { type: 't', value: THREE.ImageUtils.loadTexture( 'cmb.jpg' ) },
-            blackbody: { type: 't', value: THREE.ImageUtils.loadTexture( 'blackbody.jpg' ) },
+            texture1: { type: 't', value: new THREE.TextureLoader().load( 'cmb.jpg' ) },
+            blackbody: { type: 't', value: new THREE.TextureLoader().load( 'blackbody.jpg' ) },
             boost: { value: lorentz_boost },
             cmb_fluctuations: { value : cmb_fluctuations },
             cmb_temperature: { value : cmb_temperature }
